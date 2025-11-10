@@ -1,0 +1,12 @@
+# Ignora o ambiente 
+venv/
+
+# Ignora arquivos de log
+*.log
+
+# Ignora configurações locais
+.env
+
+# Ignora 
+
+.vscode/

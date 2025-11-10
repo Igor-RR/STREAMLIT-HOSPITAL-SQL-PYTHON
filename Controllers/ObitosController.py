@@ -1,0 +1,137 @@
+# Controllers/ObitosController.py
+import sqlite3
+import sys
+import os
+
+# Adiciona o diretório pai ao path para importar Models
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from Models.Obitos import Obitos
+
+def conectaBD():
+    return sqlite3.connect("Hospital.db")
+
+def incluir_obito(obito):
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        # Validações
+        if not obito.id_paciente:
+            raise ValueError("ID do paciente é obrigatório")
+        
+        if not obito.data_obito or not obito.data_obito.strip():
+            raise ValueError("Data do óbito é obrigatória")
+        
+        if not obito.causa_obito or not obito.causa_obito.strip():
+            raise ValueError("Causa do óbito é obrigatória")
+        
+        cursor.execute('''
+            INSERT INTO obitos (id_paciente, data_obito, causa_obito, observacoes)
+            VALUES (?, ?, ?, ?)
+        ''', (
+            obito.id_paciente,
+            obito.data_obito.strip(),
+            obito.causa_obito.strip(),
+            obito.observacoes.strip() if obito.observacoes else None
+        ))
+        
+        conexao.commit()
+        return True
+    except ValueError as e:
+        print(f"Erro de validação: {e}")
+        return False
+    except sqlite3.Error as e:
+        print(f"Erro no banco: {e}")
+        return False
+    finally:
+        conexao.close()
+
+def consultar_obitos():
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute("SELECT * FROM obitos")
+        obitos = cursor.fetchall()
+        return [Obitos(
+            id_obito=row[0],
+            id_paciente=row[1],
+            data_obito=row[2],
+            causa_obito=row[3],
+            observacoes=row[4]
+        ) for row in obitos]
+    except sqlite3.Error as e:
+        print(f"Erro ao consultar: {e}")
+        return []
+    finally:
+        conexao.close()
+
+def consultar_obito_por_id(id_obito):
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute("SELECT * FROM obitos WHERE id_obito = ?", (id_obito,))
+        row = cursor.fetchone()
+        if row:
+            return Obitos(
+                id_obito=row[0],
+                id_paciente=row[1],
+                data_obito=row[2],
+                causa_obito=row[3],
+                observacoes=row[4]
+            )
+        return None
+    except sqlite3.Error as e:
+        print(f"Erro ao consultar: {e}")
+        return None
+    finally:
+        conexao.close()
+
+def excluir_obito(id_obito):
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute("DELETE FROM obitos WHERE id_obito = ?", (id_obito,))
+        conexao.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        print(f"Erro ao excluir: {e}")
+        return False
+    finally:
+        conexao.close()
+
+def alterar_obito(obito):
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        # Validações
+        if not obito.id_paciente:
+            raise ValueError("ID do paciente é obrigatório")
+        
+        if not obito.data_obito or not obito.data_obito.strip():
+            raise ValueError("Data do óbito é obrigatória")
+        
+        if not obito.causa_obito or not obito.causa_obito.strip():
+            raise ValueError("Causa do óbito é obrigatória")
+        
+        cursor.execute('''
+            UPDATE obitos 
+            SET id_paciente = ?, data_obito = ?, causa_obito = ?, observacoes = ?
+            WHERE id_obito = ?
+        ''', (
+            obito.id_paciente,
+            obito.data_obito.strip(),
+            obito.causa_obito.strip(),
+            obito.observacoes.strip() if obito.observacoes else None,
+            obito.id_obito
+        ))
+        
+        conexao.commit()
+        return cursor.rowcount > 0
+    except ValueError as e:
+        print(f"Erro de validação: {e}")
+        return False
+    except sqlite3.Error as e:
+        print(f"Erro no banco: {e}")
+        return False
+    finally:
+        conexao.close()
