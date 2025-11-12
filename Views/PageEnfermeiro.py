@@ -184,21 +184,31 @@ def show_enfermeiro_page():
                     st.write("### Editar Dados Específicos do Enfermeiro")
                     
                     numero_coren = st.text_input("Número COREN:", value=enf_original.numero_coren)
-                    ano_registro = st.text_input("Ano de Registro:", value=enf_original.ano_registro)
+                    
+                    # CAMPO ATUALIZADO COM PLACEHOLDER E FORMATAÇÃO
+                    ano_registro = st.text_input(
+                        "Ano de Registro:", 
+                        value=enf_original.ano_registro,
+                        help="Digite a data no formato dd-mm-aaaa (ex: 15-03-2023)"
+                    )
                     
                     if st.form_submit_button("Confirmar Alterações"):
                         if numero_coren.strip() and ano_registro.strip():
-                            enfermeiro_atualizado = Enfermeiros(
-                                cpf_enfermeiro=enf_original.cpf_enfermeiro,
-                                numero_coren=numero_coren.strip(),
-                                ano_registro=ano_registro.strip()
-                            )
-                            
-                            if EnfermeirosController.alterar_enfermeiro(enfermeiro_atualizado):
-                                st.success("Dados do enfermeiro alterados com sucesso!")
-                                st.rerun()
+                            # VALIDAÇÃO SIMPLES DO FORMATO
+                            if len(ano_registro) == 10 and ano_registro[2] == '-' and ano_registro[5] == '-':
+                                enfermeiro_atualizado = Enfermeiros(
+                                    cpf_enfermeiro=enf_original.cpf_enfermeiro,
+                                    numero_coren=numero_coren.strip(),
+                                    ano_registro=ano_registro.strip()
+                                )
+                                
+                                if EnfermeirosController.alterar_enfermeiro(enfermeiro_atualizado):
+                                    st.success("Dados do enfermeiro alterados com sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.error("Erro ao alterar dados do enfermeiro!")
                             else:
-                                st.error("Erro ao alterar dados do enfermeiro!")
+                                st.warning("Por favor, use o formato dd-mm-aaaa para a data de registro!")
                         else:
                             st.warning("Por favor, informe COREN e ano de registro!")
         else:

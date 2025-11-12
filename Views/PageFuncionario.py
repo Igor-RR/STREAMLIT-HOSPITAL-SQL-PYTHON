@@ -10,96 +10,127 @@ import Controllers.FuncionariosHospitalController as FuncionarioController
 
 def show_funcionario_page():
     st.title('Cadastro de Funcionários')
+    st.info("🏥 **Sistema exclusivo para Médicos e Enfermeiros**")
 
     # Menu de operações para Funcionário
     Page_Funcionario = st.sidebar.selectbox("Operações", ["Incluir", "Consultar", "Excluir", "Alterar"])
 
     if Page_Funcionario == "Incluir":
-        st.subheader("Incluir Novo Funcionário")
+        st.subheader("Cadastrar Novo Profissional")
         
         with st.form(key="incluir_funcionario"):
             # Dados básicos do funcionário
-            st.write("### Dados Básicos do Funcionário")
-            nome = st.text_input("Nome do Funcionário:")
+            st.write("### Dados Básicos")
+            nome = st.text_input("Nome Completo:")
             cargo = st.text_input("Cargo:")
             cpf = st.number_input("CPF:", min_value=0, step=1, format="%d")
             id_departamento = st.number_input("ID do Departamento:", min_value=1, step=1)
             
-            # Seleção do tipo de funcionário
-            st.write("### Tipo de Funcionário")
-            tipo_funcionario = st.selectbox(
-                "Selecione o tipo de funcionário:",
-                ["Funcionário Comum", "Médico", "Enfermeiro"]
+            # Seleção do tipo de profissional - APENAS MÉDICO OU ENFERMEIRO
+            st.write("### Tipo de Profissional")
+            tipo_funcionario = st.radio(
+                "Selecione o tipo de profissional:",
+                ["Médico", "Enfermeiro"],
+                horizontal=True
             )
             
             # Campos específicos para Médico
             if tipo_funcionario == "Médico":
-                st.write("### Dados Específicos do Médico")
-                numero_registro = st.text_input("Número de Registro do CRM:")
-                ano_registro_medico = st.text_input("Ano de Registro do CRM:")
-                telefone = st.text_input("Telefone do Médico:")
+                st.write("### Dados do CRM")
+                numero_registro = st.text_input("Número de Registro do CRM*:")
+                ano_registro = st.text_input(
+                    "Ano de Registro do CRM (dd-mm-aaaa)*:",
+                    placeholder="dd-mm-aaaa",
+                    help="Digite no formato dd-mm-aaaa"
+                )
+                telefone = st.text_input("Telefone:")
             
             # Campos específicos para Enfermeiro
-            elif tipo_funcionario == "Enfermeiro":
-                st.write("### Dados Específicos do Enfermeiro")
-                numero_coren = st.text_input("Número COREN:")
-                ano_registro_enfermeiro = st.text_input("Ano de Registro do COREN:")
+            else:  # Enfermeiro
+                st.write("### Dados do COREN")
+                numero_coren = st.text_input("Número COREN*:")
+                ano_registro = st.text_input(
+                    "Ano de Registro do COREN (dd-mm-aaaa)*:",
+                    placeholder="dd-mm-aaaa",
+                    help="Digite no formato dd-mm-aaaa"
+                )
+                telefone = ""  # Enfermeiros não têm telefone específico
             
-            if st.form_submit_button("Inserir Funcionário"):
-                if nome.strip() and cargo.strip():
-                    novo_funcionario = Funcionario_hospital(
-                        nome=nome.strip(),
-                        cargo=cargo.strip(),
-                        cpf_funcionario=cpf,
-                        id_departamento=id_departamento
+            st.caption("* Campos obrigatórios")
+            
+            submit_button = st.form_submit_button("Cadastrar Profissional")
+            
+            if submit_button:
+                # Validações básicas
+                if not nome.strip():
+                    st.error("❌ Nome é obrigatório!")
+                    return
+                if not cargo.strip():
+                    st.error("❌ Cargo é obrigatório!")
+                    return
+                
+                # Validações específicas por tipo
+                if tipo_funcionario == "Médico":
+                    if not numero_registro.strip():
+                        st.error("❌ Número de registro do CRM é obrigatório!")
+                        return
+                    if not ano_registro.strip():
+                        st.error("❌ Ano de registro do CRM é obrigatório!")
+                        return
+                
+                else:  # Enfermeiro
+                    if not numero_coren.strip():
+                        st.error("❌ Número COREN é obrigatório!")
+                        return
+                    if not ano_registro.strip():
+                        st.error("❌ Ano de registro do COREN é obrigatório!")
+                        return
+                
+                # Criar objeto do funcionário
+                novo_funcionario = Funcionario_hospital(
+                    nome=nome.strip(),
+                    cargo=cargo.strip(),
+                    cpf_funcionario=cpf,
+                    id_departamento=id_departamento
+                )
+                
+                # Preparar dados específicos conforme o tipo
+                dados_especificos = {}
+                if tipo_funcionario == "Médico":
+                    dados_especificos = {
+                        'numero_registro': numero_registro.strip(),
+                        'ano_registro': ano_registro.strip(),
+                        'telefone': telefone.strip()
+                    }
+                else:  # Enfermeiro
+                    dados_especificos = {
+                        'numero_coren': numero_coren.strip(),
+                        'ano_registro': ano_registro.strip()
+                    }
+                
+                # Inserir no banco (sempre com tipo específico)
+                try:
+                    sucesso = FuncionarioController.incluir_funcionario_com_tipo(
+                        novo_funcionario, 
+                        tipo_funcionario, 
+                        dados_especificos
                     )
                     
-                    # Preparar dados específicos conforme o tipo
-                    dados_especificos = {}
-                    if tipo_funcionario == "Médico":
-                        if not numero_registro.strip() or not ano_registro_medico.strip():
-                            st.error("❌ Número de registro e ano de registro são obrigatórios para médicos!")
-                            return
-                        dados_especificos = {
-                            'numero_registro': numero_registro,
-                            'ano_registro': ano_registro_medico,
-                            'telefone': telefone
-                        }
-                    elif tipo_funcionario == "Enfermeiro":
-                        if not numero_coren.strip() or not ano_registro_enfermeiro.strip():
-                            st.error("❌ Número COREN e ano de registro são obrigatórios para enfermeiros!")
-                            return
-                        dados_especificos = {
-                            'numero_coren': numero_coren,
-                            'ano_registro': ano_registro_enfermeiro
-                        }
-                    
-                    # Usar função apropriada conforme o tipo
-                    if tipo_funcionario == "Funcionário Comum":
-                        sucesso = FuncionarioController.incluir_funcionario(novo_funcionario)
-                    else:
-                        sucesso = FuncionarioController.incluir_funcionario_com_tipo(
-                            novo_funcionario, 
-                            tipo_funcionario, 
-                            dados_especificos
-                        )
-                    
                     if sucesso:
-                        st.toast(f"✅ {tipo_funcionario} cadastrado com sucesso!", icon="✅")
+                        st.success(f"✅ {tipo_funcionario} cadastrado com sucesso!")
                         st.rerun()
                     else:
-                        st.toast("❌ Erro ao cadastrar funcionário!", icon="❌")
-                else:
-                    st.toast("⚠️ Por favor, informe nome e cargo!", icon="⚠️")
+                        st.error("❌ Erro ao cadastrar profissional!")
+                except Exception as e:
+                    st.error(f"❌ Erro no sistema: {str(e)}")
 
     elif Page_Funcionario == "Consultar":
-        st.subheader("Consultar Funcionários")
+        st.subheader("Consultar Profissionais")
         
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            if st.button("Consultar Todos com Tipo"):
-                # Usa a nova função que retorna com tipo
+            if st.button("Consultar Todos os Profissionais"):
                 funcionarios = FuncionarioController.consultar_funcionarios_com_tipo()
                 if funcionarios:
                     # Converter para DataFrame
@@ -108,10 +139,10 @@ def show_funcionario_page():
                         tipo = func['tipo_funcionario']
                         if tipo == 'Médico':
                             info_especifica = f"CRM: {func['numero_registro']} - {func['ano_registro_medico']}"
-                        elif tipo == 'Enfermeiro':
+                            if func['telefone']:
+                                info_especifica += f" | Tel: {func['telefone']}"
+                        else:  # Enfermeiro
                             info_especifica = f"COREN: {func['numero_coren']} - {func['ano_registro_enfermeiro']}"
-                        else:
-                            info_especifica = "Funcionário Comum"
                             
                         dados.append({
                             "CPF": func['cpf_funcionario'],
@@ -119,7 +150,7 @@ def show_funcionario_page():
                             "Cargo": func['cargo'],
                             "ID Departamento": func['id_departamento'],
                             "Tipo": tipo,
-                            "Informações Específicas": info_especifica
+                            "Registro": info_especifica
                         })
                     
                     df = pd.DataFrame(dados)
@@ -130,15 +161,13 @@ def show_funcionario_page():
                     total_funcionarios = len(df)
                     tipos_funcionarios = df['Tipo'].value_counts()
                     
-                    col1, col2, col3 = st.columns(3)
+                    col1, col2 = st.columns(2)
                     with col1:
-                        st.metric("Total Funcionários", total_funcionarios)
-                    with col2:
                         st.metric("Médicos", tipos_funcionarios.get('Médico', 0))
-                    with col3:
+                    with col2:
                         st.metric("Enfermeiros", tipos_funcionarios.get('Enfermeiro', 0))
                 else:
-                    st.info("Nenhum funcionário cadastrado.")
+                    st.info("Nenhum profissional cadastrado.")
         
         with col2:
             st.subheader("Buscar por Nome")
@@ -156,15 +185,14 @@ def show_funcionario_page():
                                 "ID Departamento": func.id_departamento
                             })
                         st.dataframe(pd.DataFrame(dados), use_container_width=True)
-                        st.toast(f"✅ Encontrados {len(funcionarios)} funcionários!", icon="✅")
+                        st.success(f"✅ Encontrados {len(funcionarios)} profissionais!")
                     else:
-                        st.info("Nenhum funcionário encontrado com esse nome.")
-                        st.toast("🔍 Nenhum funcionário encontrado!", icon="🔍")
+                        st.info("Nenhum profissional encontrado com esse nome.")
                 else:
-                    st.toast("⚠️ Digite um nome para buscar!", icon="⚠️")
+                    st.warning("⚠️ Digite um nome para buscar!")
 
     elif Page_Funcionario == "Excluir":
-        st.subheader("Excluir Funcionário")
+        st.subheader("Excluir Profissional")
         
         funcionarios = FuncionarioController.consultar_funcionarios_com_tipo()
         if funcionarios:
@@ -182,22 +210,22 @@ def show_funcionario_page():
             df = pd.DataFrame(dados)
             st.dataframe(df, use_container_width=True)
             
-            # Seleção do funcionário para excluir
+            # Seleção do profissional para excluir
             nomes_funcionarios = [f"{func['cpf_funcionario']} - {func['nome']} ({func['tipo_funcionario']})" for func in funcionarios]
             
             funcionario_selecionado = st.selectbox(
-                "Selecione o funcionário para excluir:",
+                "Selecione o profissional para excluir:",
                 options=nomes_funcionarios,
                 index=0
             )
             
-            # Extrair CPF do funcionário selecionado
+            # Extrair CPF do profissional selecionado
             cpf_excluir = int(funcionario_selecionado.split(" - ")[0])
             
-            # Mostrar informações do funcionário selecionado
+            # Mostrar informações do profissional selecionado
             func_info = next((func for func in funcionarios if func['cpf_funcionario'] == cpf_excluir), None)
             if func_info:
-                st.warning(f"⚠️ **Funcionário selecionado para exclusão:**")
+                st.warning(f"⚠️ **Profissional selecionado para exclusão:**")
                 st.write(f"**CPF:** {func_info['cpf_funcionario']}")
                 st.write(f"**Nome:** {func_info['nome']}")
                 st.write(f"**Cargo:** {func_info['cargo']}")
@@ -209,22 +237,20 @@ def show_funcionario_page():
                     st.write(f"**CRM:** {func_info['numero_registro']} - {func_info['ano_registro_medico']}")
                     if func_info['telefone']:
                         st.write(f"**Telefone:** {func_info['telefone']}")
-                elif func_info['tipo_funcionario'] == 'Enfermeiro':
+                else:  # Enfermeiro
                     st.write(f"**COREN:** {func_info['numero_coren']} - {func_info['ano_registro_enfermeiro']}")
             
-            if st.button("Excluir Funcionário", type="primary"):
-                # Usa a função de exclusão completa
+            if st.button("Excluir Profissional", type="primary"):
                 if FuncionarioController.excluir_funcionario_completo(cpf_excluir):
-                    st.toast("✅ Funcionário excluído com sucesso!", icon="✅")
+                    st.success("✅ Profissional excluído com sucesso!")
                     st.rerun()
                 else:
-                    st.toast("❌ Erro ao excluir funcionário!", icon="❌")
+                    st.error("❌ Erro ao excluir profissional!")
         else:
-            st.info("Nenhum funcionário cadastrado.")
-            st.toast("📝 Nenhum funcionário para excluir!", icon="📝")
+            st.info("Nenhum profissional cadastrado.")
 
     elif Page_Funcionario == "Alterar":
-        st.subheader("Alterar Funcionário")
+        st.subheader("Alterar Dados do Profissional")
         
         funcionarios = FuncionarioController.consultar_funcionarios_com_tipo()
         if funcionarios:
@@ -242,26 +268,26 @@ def show_funcionario_page():
             df = pd.DataFrame(dados)
             st.dataframe(df, use_container_width=True)
             
-            # Seleção do funcionário para alterar
+            # Seleção do profissional para alterar
             nomes_funcionarios = [f"{func['cpf_funcionario']} - {func['nome']} ({func['tipo_funcionario']})" for func in funcionarios]
             
             funcionario_selecionado = st.selectbox(
-                "Selecione o funcionário para alterar:",
+                "Selecione o profissional para alterar:",
                 options=nomes_funcionarios,
                 key="alterar_select_funcionario"
             )
             
-            # Extrair CPF do funcionário selecionado
+            # Extrair CPF do profissional selecionado
             cpf_alterar = int(funcionario_selecionado.split(" - ")[0])
             
-            # Buscar dados do funcionário selecionado
+            # Buscar dados do profissional selecionado
             func_original = FuncionarioController.consultar_funcionario_por_cpf(cpf_alterar)
             
             if func_original:
                 with st.form(key="alterar_funcionario"):
-                    st.write("### Editar Dados Básicos do Funcionário")
+                    st.write("### Editar Dados Básicos")
                     
-                    nome = st.text_input("Nome do Funcionário:", value=func_original.nome)
+                    nome = st.text_input("Nome Completo:", value=func_original.nome)
                     cargo = st.text_input("Cargo:", value=func_original.cargo)
                     id_departamento = st.number_input(
                         "ID do Departamento:", 
@@ -280,15 +306,14 @@ def show_funcionario_page():
                             )
                             
                             if FuncionarioController.alterar_funcionario(funcionario_atualizado):
-                                st.toast("✅ Dados básicos do funcionário alterados com sucesso!", icon="✅")
+                                st.success("✅ Dados básicos alterados com sucesso!")
                                 st.rerun()
                             else:
-                                st.toast("❌ Erro ao alterar funcionário!", icon="❌")
+                                st.error("❌ Erro ao alterar dados!")
                         else:
-                            st.toast("⚠️ Por favor, informe nome e cargo!", icon="⚠️")
+                            st.warning("⚠️ Por favor, informe nome e cargo!")
         else:
-            st.info("Nenhum funcionário cadastrado.")
-            st.toast("📝 Nenhum funcionário para alterar!", icon="📝")
+            st.info("Nenhum profissional cadastrado.")
 
 if __name__ == "__main__":
     show_funcionario_page()

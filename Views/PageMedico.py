@@ -188,23 +188,34 @@ def show_medico_page():
                     st.write("### Editar Dados Específicos do Médico")
                     
                     numero_registro = st.text_input("Número de Registro:", value=med_original.numero_registro)
-                    ano_registro = st.text_input("Ano de Registro:", value=med_original.ano_registro)
+                    
+                    # CAMPO ATUALIZADO COM PLACEHOLDER E FORMATAÇÃO PARA ANO DE REGISTRO DO CRM
+                    ano_registro = st.text_input(
+                        "Ano de Registro do CRM:", 
+                        value=med_original.ano_registro,
+                        help="Digite a data no formato dd-mm-aaaa (ex: 15-03-2023)"
+                    )
+                    
                     telefone = st.text_input("Telefone:", value=med_original.telefone or "")
                     
                     if st.form_submit_button("Confirmar Alterações"):
                         if numero_registro.strip() and ano_registro.strip():
-                            medico_atualizado = Medicos(
-                                cpf_medico=med_original.cpf_medico,
-                                numero_registro=numero_registro.strip(),
-                                ano_registro=ano_registro.strip(),
-                                telefone=telefone.strip()
-                            )
-                            
-                            if MedicosController.alterar_medico(medico_atualizado):
-                                st.success("Dados do médico alterados com sucesso!")
-                                st.rerun()
+                            # VALIDAÇÃO SIMPLES DO FORMATO DA DATA
+                            if len(ano_registro) == 10 and ano_registro[2] == '-' and ano_registro[5] == '-':
+                                medico_atualizado = Medicos(
+                                    cpf_medico=med_original.cpf_medico,
+                                    numero_registro=numero_registro.strip(),
+                                    ano_registro=ano_registro.strip(),
+                                    telefone=telefone.strip()
+                                )
+                                
+                                if MedicosController.alterar_medico(medico_atualizado):
+                                    st.success("Dados do médico alterados com sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.error("Erro ao alterar dados do médico!")
                             else:
-                                st.error("Erro ao alterar dados do médico!")
+                                st.warning("Por favor, use o formato dd-mm-aaaa para a data de registro do CRM!")
                         else:
                             st.warning("Por favor, informe número e ano de registro!")
         else:
