@@ -9,11 +9,13 @@ import pandas as pd
 from Models.Medicos import Medicos
 import Controllers.MedicosController as MedicosController
 import Controllers.FuncionariosHospitalController as FuncionarioController
+import Controllers.ObitosController as ObitosController  # NOVA IMPORTACAO
 
 def show_medico_page():
     st.title('Gestão de Médicos')
     st.info("💡 **Atenção:** Para cadastrar novos médicos, use a página de Funcionários")
     
+    # Remove a opção "Incluir" do sidebar
     Page_Medico = st.sidebar.selectbox("Operações", ["Consultar", "Excluir", "Alterar"])
 
     if Page_Medico == "Consultar":
@@ -36,14 +38,14 @@ def show_medico_page():
                             "Nº Registro": med['numero_registro'],
                             "Ano Registro": med['ano_registro'],
                             "Telefone": med['telefone'] or "Não informado",
-                            "Óbitos Registrados": med['total_obitos']
+                            "Óbitos Registrados": med['total_obitos']  # NOVA COLUNA
                         })
                     
                     df = pd.DataFrame(dados)
                     st.dataframe(df, use_container_width=True)
                     
                     # Estatísticas
-                    st.subheader("📊 Estatísticas")
+                    st.subheader("Estatísticas")
                     total_medicos = len(df)
                     departamentos_unicos = df['Departamento'].nunique()
                     total_obitos = df['Óbitos Registrados'].sum()
@@ -64,6 +66,7 @@ def show_medico_page():
                     st.info("Nenhum médico cadastrado.")
             
             if st.button("Consultar Apenas Dados de Médico"):
+                # USA FUNÇÃO ORIGINAL (sem join)
                 medicos = MedicosController.consultar_medicos()
                 if medicos:
                     dados = []
@@ -77,15 +80,13 @@ def show_medico_page():
                     
                     df = pd.DataFrame(dados)
                     st.dataframe(df, use_container_width=True)
-                    
-                    st.info(f"📋 Total de {len(medicos)} médico(s) cadastrado(s)")
                 else:
-                    st.info("Nenhum médico cadastrado na tabela 'medicos'.")
+                    st.info("Nenhum médico cadastrado.")
         
         with col2:
-            st.subheader("🔍 Buscar por Registro")
+            st.subheader("Buscar por Registro")
             registro_busca = st.text_input("Digite o número de registro:")
-            if st.button("Buscar Médico"):
+            if st.button("Buscar"):
                 if registro_busca.strip():
                     medicos = MedicosController.buscar_medicos_por_registro(registro_busca.strip())
                     if medicos:
@@ -98,16 +99,17 @@ def show_medico_page():
                                 "Telefone": med.telefone or "Não informado"
                             })
                         st.dataframe(pd.DataFrame(dados), use_container_width=True)
-                        st.success(f"✅ Encontrados {len(medicos)} médico(s)!")
+                        st.success(f"Encontrados {len(medicos)} médicos!")
                     else:
-                        st.info("❌ Nenhum médico encontrado com esse registro.")
+                        st.info("Nenhum médico encontrado com esse registro.")
                 else:
-                    st.warning("⚠️ Digite um registro para buscar!")
+                    st.warning("Digite um registro para buscar!")
 
     elif Page_Medico == "Excluir":
         st.subheader("Excluir Médico")
         st.info("💡 **Atenção:** Esta ação excluirá o médico completamente do sistema")
         
+        # USA A NOVA FUNÇÃO COM JOIN PARA MOSTRAR INFORMAÇÕES COMPLETAS
         medicos = MedicosController.consultar_medicos_com_departamento_e_obitos()
         if medicos:
             dados = []
@@ -124,6 +126,7 @@ def show_medico_page():
             st.dataframe(df, use_container_width=True)
             
             # Seleção do médico para excluir
+            cpfs_medicos = [med['cpf_medico'] for med in medicos]
             nomes_medicos = [f"{med['cpf_medico']} - {med['nome']} (Óbitos: {med['total_obitos']})" for med in medicos]
             
             medico_selecionado = st.selectbox(
@@ -152,19 +155,21 @@ def show_medico_page():
                 if med_info['total_obitos'] > 0:
                     st.error("⚠️ **ATENÇÃO:** Este médico tem óbitos registrados! A exclusão pode afetar os registros de óbitos.")
             
-            if st.button("🗑️ Excluir Médico", type="primary"):
+            if st.button("Excluir Médico", type="primary"):
+                # ALTERAÇÃO: Usa a exclusão completa do funcionário
                 if FuncionarioController.excluir_funcionario_completo(cpf_excluir):
-                    st.success("✅ Médico excluído com sucesso!")
+                    st.success("Médico excluído com sucesso!")
                     st.rerun()
                 else:
-                    st.error("❌ Erro ao excluir médico!")
+                    st.error("Erro ao excluir médico!")
         else:
-            st.info("ℹ️ Nenhum médico cadastrado.")
+            st.info("Nenhum médico cadastrado.")
 
     elif Page_Medico == "Alterar":
         st.subheader("Alterar Dados do Médico")
         st.info("💡 **Atenção:** Para alterar dados básicos (nome, cargo, departamento), use a página de Funcionários")
         
+        # USA A NOVA FUNÇÃO COM JOIN
         medicos = MedicosController.consultar_medicos_com_departamento_e_obitos()
         if medicos:
             dados = []
@@ -192,7 +197,7 @@ def show_medico_page():
             # Extrair CPF do médico selecionado
             cpf_alterar = int(medico_selecionado.split(" - ")[0])
             
-            # Buscar dados do médico selecionado
+            # Buscar dados do médico selecionado (usa função original)
             med_original = MedicosController.consultar_medico_por_cpf(cpf_alterar)
             
             if med_original:
@@ -201,6 +206,7 @@ def show_medico_page():
                     
                     numero_registro = st.text_input("Número de Registro:", value=med_original.numero_registro)
                     
+                    # CAMPO ATUALIZADO COM PLACEHOLDER E FORMATAÇÃO PARA ANO DE REGISTRO DO CRM
                     ano_registro = st.text_input(
                         "Ano de Registro do CRM:", 
                         value=med_original.ano_registro,
@@ -209,24 +215,28 @@ def show_medico_page():
                     
                     telefone = st.text_input("Telefone:", value=med_original.telefone or "")
                     
-                    if st.form_submit_button("💾 Confirmar Alterações"):
+                    if st.form_submit_button("Confirmar Alterações"):
                         if numero_registro.strip() and ano_registro.strip():
-                            medico_atualizado = Medicos(
-                                cpf_medico=med_original.cpf_medico,
-                                numero_registro=numero_registro.strip(),
-                                ano_registro=ano_registro.strip(),
-                                telefone=telefone.strip()
-                            )
-                            
-                            if MedicosController.alterar_medico(medico_atualizado):
-                                st.success("✅ Dados do médico alterados com sucesso!")
-                                st.rerun()
+                            # VALIDAÇÃO SIMPLES DO FORMATO DA DATA
+                            if len(ano_registro) == 10 and ano_registro[2] == '-' and ano_registro[5] == '-':
+                                medico_atualizado = Medicos(
+                                    cpf_medico=med_original.cpf_medico,
+                                    numero_registro=numero_registro.strip(),
+                                    ano_registro=ano_registro.strip(),
+                                    telefone=telefone.strip()
+                                )
+                                
+                                if MedicosController.alterar_medico(medico_atualizado):
+                                    st.success("Dados do médico alterados com sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.error("Erro ao alterar dados do médico!")
                             else:
-                                st.error("❌ Erro ao alterar dados do médico!")
+                                st.warning("Por favor, use o formato dd-mm-aaaa para a data de registro do CRM!")
                         else:
-                            st.warning("⚠️ Por favor, informe número e ano de registro!")
+                            st.warning("Por favor, informe número e ano de registro!")
         else:
-            st.info("ℹ️ Nenhum médico cadastrado.")
+            st.info("Nenhum médico cadastrado.")
 
 if __name__ == "__main__":
     show_medico_page()

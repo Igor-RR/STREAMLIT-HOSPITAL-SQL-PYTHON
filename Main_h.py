@@ -71,6 +71,10 @@ def inicializar_sistema():
         )
         from Views.PageMedico import show_medico_page
 
+        from Models.Obitos import Obitos
+        import Controllers.ObitosController as ObitosController
+        from Views.PageObitos import show_obitos_page
+
         # Verificar Enfermeiros
         from Models.Enfermeiros import Enfermeiros
         from Controllers.EnfermeirosController import (
