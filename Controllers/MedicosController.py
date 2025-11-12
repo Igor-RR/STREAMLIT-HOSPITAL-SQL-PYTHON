@@ -183,7 +183,7 @@ def consultar_medicos_com_departamento_e_obitos():
                 COALESCE((
                     SELECT COUNT(*) 
                     FROM obitos o 
-                    WHERE o.id_medico = m.cpf_medico  # CORREÇÃO: id_medico
+                    WHERE o.id_medico = m.cpf_medico
                 ), 0) as total_obitos
             FROM medicos m
             LEFT JOIN funcionarios_hospital f ON m.cpf_medico = f.cpf

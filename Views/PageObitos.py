@@ -10,7 +10,7 @@ from Models.Obitos import Obitos
 import Controllers.ObitosController as ObitosController
 
 def show_obitos_page():
-    st.title('Cadastro de Óbitos')
+    st.title('Cadastro de Óbitos 💀')
     
     Page_Obitos = st.sidebar.selectbox("Operações", ["Incluir", "Consultar", "Excluir", "Alterar"])
 
@@ -19,7 +19,7 @@ def show_obitos_page():
         
         with st.form(key="incluir_obito"):
             id_paciente = st.number_input("ID do Paciente:", min_value=1, step=1)
-            id_medico = st.number_input("ID do Médico:", min_value=1, step=1)  # NOVO CAMPO
+            id_medico = st.number_input("CPF do Médico (use o CPF cadastrado na seção Funcionários):", min_value=1, step=1)  # NOVO CAMPO
             data_obito = st.text_input("Data do Óbito (YYYY-MM-DD):")
             causa_obito = st.text_input("Causa do Óbito:")
             observacoes = st.text_area("Observações:")
@@ -54,7 +54,7 @@ def show_obitos_page():
                     dados.append({
                         "ID Óbito": obito.id_obito,
                         "ID Paciente": obito.id_paciente,
-                        "ID Médico": obito.id_medico,  # NOVO CAMPO
+                        "CPF Médico": obito.id_medico,  # NOVO CAMPO (CPF do médico)
                         "Data Óbito": obito.data_obito,
                         "Causa": obito.causa_obito,
                         "Observações": obito.observacoes
@@ -75,7 +75,7 @@ def show_obitos_page():
                 dados.append({
                     "ID Óbito": obito.id_obito,
                     "ID Paciente": obito.id_paciente,
-                    "ID Médico": obito.id_medico,  # NOVO CAMPO
+                    "CPF Médico": obito.id_medico,  # NOVO CAMPO (CPF do médico)
                     "Data Óbito": obito.data_obito,
                     "Causa": obito.causa_obito
                 })
@@ -121,7 +121,7 @@ def show_obitos_page():
                     st.write("Editar Óbito")
                     
                     id_paciente = st.number_input("ID do Paciente:", value=obito_original.id_paciente)
-                    id_medico = st.number_input("ID do Médico:", value=obito_original.id_medico)  # NOVO CAMPO
+                    id_medico = st.number_input("CPF do Médico (use o CPF cadastrado na seção Funcionários):", value=obito_original.id_medico)  # NOVO CAMPO
                     data_obito = st.text_input("Data do Óbito:", value=obito_original.data_obito)
                     causa_obito = st.text_input("Causa do Óbito:", value=obito_original.causa_obito)
                     observacoes = st.text_area("Observações:", value=obito_original.observacoes or "")

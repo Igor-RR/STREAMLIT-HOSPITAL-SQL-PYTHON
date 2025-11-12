@@ -22,12 +22,14 @@ def inicializar_sistema():
         from Services.tabela_medicos import criar_tabela as criar_medicos
         from Services.tabela_enfermeiros import criar_tabela as criar_enfermeiros
         from Services.tabela_obitos import criar_tabela as criar_obitos
+        from Services.tabela_pacientes import criar_tabela as criar_pacientes
         
         criar_departamentos()
         criar_funcionarios()
         criar_medicos()
         criar_enfermeiros()
         criar_obitos()
+        criar_pacientes()
         
         st.sidebar.success("✅ Banco de dados inicializado!")
     except Exception as e:

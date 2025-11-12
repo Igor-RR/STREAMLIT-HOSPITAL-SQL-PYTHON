@@ -10,16 +10,26 @@ def criar_tabela():
             CREATE TABLE IF NOT EXISTS obitos (
                 id_obito INTEGER PRIMARY KEY AUTOINCREMENT,
                 id_paciente INTEGER NOT NULL,
-                id_medico INTEGER NOT NULL,  -- NOVO CAMPO
                 data_obito DATE NOT NULL,
                 causa_obito TEXT NOT NULL,
                 observacoes TEXT,
-                FOREIGN KEY (id_paciente) REFERENCES pacientes(id_paciente),
-                FOREIGN KEY (id_medico) REFERENCES medicos(cpf_medico)  -- RELAÇÃO COM MÉDICOS
+                FOREIGN KEY (id_paciente) REFERENCES pacientes(id_paciente)
             )
         ''')
         
         conexao.commit()
+
+        # Migração: se a coluna id_medico não existir (DBs antigas), adiciona-a.
+        cursor.execute("PRAGMA table_info(obitos)")
+        cols = [row[1] for row in cursor.fetchall()]
+        if 'id_medico' not in cols:
+            try:
+                cursor.execute("ALTER TABLE obitos ADD COLUMN id_medico INTEGER DEFAULT NULL")
+                conexao.commit()
+                print("✅ Coluna 'id_medico' adicionada à tabela 'obitos' (migração)")
+            except Exception as e:
+                print(f"❌ Falha ao adicionar coluna 'id_medico': {e}")
+
         conexao.close()
         
         print("✅ Tabela 'obitos' criada/verificada!")

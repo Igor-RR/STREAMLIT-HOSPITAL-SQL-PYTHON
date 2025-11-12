@@ -11,44 +11,6 @@ from Models.Obitos import Obitos
 def conectaBD():
     return sqlite3.connect("Hospital.db")
 
-def incluir_obito(obito):
-    conexao = conectaBD()
-    cursor = conexao.cursor()
-    try:
-        # Validações
-        if not obito.id_paciente:
-            raise ValueError("ID do paciente é obrigatório")
-        
-        if not obito.id_medico:
-            raise ValueError("ID do médico é obrigatório")
-        
-        if not obito.data_obito or not obito.data_obito.strip():
-            raise ValueError("Data do óbito é obrigatória")
-        
-        if not obito.causa_obito or not obito.causa_obito.strip():
-            raise ValueError("Causa do óbito é obrigatória")
-        
-        cursor.execute('''
-            INSERT INTO obitos (id_paciente, id_medico, data_obito, causa_obito, observacoes)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            obito.id_paciente,
-            obito.id_medico,
-            obito.data_obito.strip(),
-            obito.causa_obito.strip(),
-            obito.observacoes.strip() if obito.observacoes else None
-        ))
-        
-        conexao.commit()
-        return True
-    except ValueError as e:
-        print(f"Erro de validação: {e}")
-        return False
-    except sqlite3.Error as e:
-        print(f"Erro no banco: {e}")
-        return False
-    finally:
-        conexao.close()
 
 def consultar_obitos():
     conexao = conectaBD()
@@ -59,7 +21,7 @@ def consultar_obitos():
         return [Obitos(
             id_obito=row[0],
             id_paciente=row[1],
-            id_medico=row[2],  # NOVO CAMPO
+            id_medico=row[2],
             data_obito=row[3],
             causa_obito=row[4],
             observacoes=row[5]
@@ -69,6 +31,7 @@ def consultar_obitos():
         return []
     finally:
         conexao.close()
+
 
 def consultar_obito_por_id(id_obito):
     conexao = conectaBD()
@@ -80,7 +43,7 @@ def consultar_obito_por_id(id_obito):
             return Obitos(
                 id_obito=row[0],
                 id_paciente=row[1],
-                id_medico=row[2],  # NOVO CAMPO
+                id_medico=row[2],
                 data_obito=row[3],
                 causa_obito=row[4],
                 observacoes=row[5]
@@ -91,6 +54,7 @@ def consultar_obito_por_id(id_obito):
         return None
     finally:
         conexao.close()
+
 
 def excluir_obito(id_obito):
     conexao = conectaBD()
@@ -105,6 +69,7 @@ def excluir_obito(id_obito):
     finally:
         conexao.close()
 
+
 def alterar_obito(obito):
     conexao = conectaBD()
     cursor = conexao.cursor()
@@ -112,16 +77,16 @@ def alterar_obito(obito):
         # Validações
         if not obito.id_paciente:
             raise ValueError("ID do paciente é obrigatório")
-        
+
         if not obito.id_medico:
             raise ValueError("ID do médico é obrigatório")
-        
+
         if not obito.data_obito or not obito.data_obito.strip():
             raise ValueError("Data do óbito é obrigatória")
-        
+
         if not obito.causa_obito or not obito.causa_obito.strip():
             raise ValueError("Causa do óbito é obrigatória")
-        
+
         cursor.execute('''
             UPDATE obitos 
             SET id_paciente = ?, id_medico = ?, data_obito = ?, causa_obito = ?, observacoes = ?
@@ -134,7 +99,7 @@ def alterar_obito(obito):
             obito.observacoes.strip() if obito.observacoes else None,
             obito.id_obito
         ))
-        
+
         conexao.commit()
         return cursor.rowcount > 0
     except ValueError as e:
@@ -146,7 +111,8 @@ def alterar_obito(obito):
     finally:
         conexao.close()
 
-# NOVA FUNÇÃO: Contar óbitos por médico
+
+# Contar óbitos por médico
 def contar_obitos_por_medico():
     conexao = conectaBD()
     cursor = conexao.cursor()
@@ -157,7 +123,6 @@ def contar_obitos_por_medico():
             GROUP BY id_medico
         ''')
         resultados = cursor.fetchall()
-        # Converter para dicionário: id_medico -> total_obitos
         return {row[0]: row[1] for row in resultados}
     except sqlite3.Error as e:
         print(f"Erro ao contar óbitos por médico: {e}")
@@ -165,38 +130,56 @@ def contar_obitos_por_medico():
     finally:
         conexao.close()
 
+
 def incluir_obito(obito):
+    """Inclui um óbito com validações e checks de integridade simples.
+
+    Retorna True em caso de sucesso, False em caso de erro.
+    """
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        # Validações
+        # Validações básicas
         if not obito.id_paciente:
             raise ValueError("ID do paciente é obrigatório")
-        
-        if not obito.id_medico:  # NOVO CAMPO
+
+        if not obito.id_medico:
             raise ValueError("ID do médico é obrigatório")
-        
+
         if not obito.data_obito or not obito.data_obito.strip():
             raise ValueError("Data do óbito é obrigatória")
-        
+
         if not obito.causa_obito or not obito.causa_obito.strip():
             raise ValueError("Causa do óbito é obrigatória")
-        
+
+        # Checar existência do paciente
+        cursor.execute("SELECT 1 FROM pacientes WHERE id_paciente = ?", (obito.id_paciente,))
+        if cursor.fetchone() is None:
+            raise ValueError(f"Paciente com ID {obito.id_paciente} não encontrado")
+
+        # Checar existência do médico
+        cursor.execute("SELECT 1 FROM medicos WHERE cpf_medico = ?", (obito.id_medico,))
+        if cursor.fetchone() is None:
+            raise ValueError(f"Médico com CPF {obito.id_medico} não encontrado")
+
         cursor.execute('''
             INSERT INTO obitos (id_paciente, id_medico, data_obito, causa_obito, observacoes)
             VALUES (?, ?, ?, ?, ?)
         ''', (
             obito.id_paciente,
-            obito.id_medico,  # NOVO CAMPO
+            obito.id_medico,
             obito.data_obito.strip(),
             obito.causa_obito.strip(),
             obito.observacoes.strip() if obito.observacoes else None
         ))
-        
+
         conexao.commit()
         return True
     except ValueError as e:
         print(f"Erro de validação: {e}")
+        return False
+    except sqlite3.IntegrityError as e:
+        print(f"Erro de integridade no banco: {e}")
         return False
     except sqlite3.Error as e:
         print(f"Erro no banco: {e}")
