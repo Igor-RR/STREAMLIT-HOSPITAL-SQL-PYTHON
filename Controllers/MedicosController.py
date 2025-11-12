@@ -1,4 +1,3 @@
-# Controllers/MedicosController.py
 import sqlite3
 import sys
 import os
@@ -11,29 +10,49 @@ from Models.Medicos import Medicos
 def conectaBD():
     return sqlite3.connect("Hospital.db")
 
-# FUNÇÃO DE INCLUSÃO REMOVIDA - O CADASTRO É FEITO VIA FUNCIONARIOS
+def incluir_medico(medico):
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO medicos (cpf_medico, numero_registro, ano_registro, telefone)
+            VALUES (?, ?, ?, ?)
+        ''', (
+            medico.cpf_medico,
+            medico.numero_registro,
+            medico.ano_registro,
+            medico.telefone
+        ))
+        conexao.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"Erro ao incluir médico: {e}")
+        return False
+    finally:
+        conexao.close()
 
 def consultar_medicos():
-    """Consulta todos os médicos"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
         cursor.execute("SELECT * FROM medicos")
-        medicos = cursor.fetchall()
-        return [Medicos(
-            cpf_medico=row[0],
-            numero_registro=row[1], 
-            ano_registro=row[2],
-            telefone=row[3]
-        ) for row in medicos]
+        resultados = cursor.fetchall()
+        medicos = []
+        for row in resultados:
+            medicos.append(Medicos(
+                cpf_medico=row[0],
+                numero_registro=row[1],
+                ano_registro=row[2],
+                telefone=row[3]
+            ))
+        return medicos
     except sqlite3.Error as e:
-        print(f"❌ Erro ao consultar: {e}")
+        print(f"Erro ao consultar médicos: {e}")
         return []
     finally:
         conexao.close()
 
 def consultar_medico_por_cpf(cpf):
-    """Consulta médico por CPF"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
@@ -42,19 +61,18 @@ def consultar_medico_por_cpf(cpf):
         if row:
             return Medicos(
                 cpf_medico=row[0],
-                numero_registro=row[1], 
+                numero_registro=row[1],
                 ano_registro=row[2],
                 telefone=row[3]
             )
         return None
     except sqlite3.Error as e:
-        print(f"❌ Erro ao consultar: {e}")
+        print(f"Erro ao consultar médico por CPF: {e}")
         return None
     finally:
         conexao.close()
 
 def excluir_medico(cpf):
-    """Exclui um médico (apenas da tabela medicos) - Use excluir_funcionario_completo para exclusão completa"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
@@ -62,97 +80,134 @@ def excluir_medico(cpf):
         conexao.commit()
         return cursor.rowcount > 0
     except sqlite3.Error as e:
-        print(f"❌ Erro ao excluir: {e}")
+        print(f"Erro ao excluir médico: {e}")
         return False
     finally:
         conexao.close()
 
 def alterar_medico(medico):
-    """Altera um médico existente"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        # Validações de negócio
-        if not medico.numero_registro or not medico.numero_registro.strip():
-            raise ValueError("Número de registro do médico é obrigatório")
-        
-        if not medico.ano_registro or not medico.ano_registro.strip():
-            raise ValueError("Ano de registro do médico é obrigatório")
-        
         cursor.execute('''
             UPDATE medicos 
             SET numero_registro = ?, ano_registro = ?, telefone = ?
             WHERE cpf_medico = ?
         ''', (
-            medico.numero_registro.strip(),
-            medico.ano_registro.strip(),
-            medico.telefone.strip() if medico.telefone else None,
+            medico.numero_registro,
+            medico.ano_registro,
+            medico.telefone,
             medico.cpf_medico
         ))
-        
         conexao.commit()
         return cursor.rowcount > 0
-    except ValueError as e:
-        print(f"❌ Erro de validação: {e}")
-        return False
     except sqlite3.Error as e:
-        print(f"❌ Erro no banco: {e}")
+        print(f"Erro ao alterar médico: {e}")
         return False
     finally:
         conexao.close()
 
 def buscar_medicos_por_registro(numero_registro):
-    """Busca médicos por número de registro"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
         cursor.execute("SELECT * FROM medicos WHERE numero_registro LIKE ?", (f'%{numero_registro}%',))
-        medicos = cursor.fetchall()
-        return [Medicos(
-            cpf_medico=row[0],
-            numero_registro=row[1], 
-            ano_registro=row[2],
-            telefone=row[3]
-        ) for row in medicos]
+        resultados = cursor.fetchall()
+        medicos = []
+        for row in resultados:
+            medicos.append(Medicos(
+                cpf_medico=row[0],
+                numero_registro=row[1],
+                ano_registro=row[2],
+                telefone=row[3]
+            ))
+        return medicos
     except sqlite3.Error as e:
-        print(f"❌ Erro ao buscar: {e}")
+        print(f"Erro ao buscar médicos por registro: {e}")
         return []
     finally:
         conexao.close()
 
 def consultar_medicos_com_departamento():
-    """Consulta médicos com JOIN nas informações do departamento"""
+    """Consulta médicos com informações de departamento"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
         cursor.execute('''
             SELECT 
-                m.cpf_medico, m.numero_registro, m.ano_registro, m.telefone,
-                f.nome, f.cargo, f.id_departamento,
+                m.cpf_medico,
+                m.numero_registro,
+                m.ano_registro,
+                m.telefone,
+                f.nome,
+                f.cargo,
                 d.nome as nome_departamento
             FROM medicos m
-            INNER JOIN funcionario_hospital f ON m.cpf_medico = f.cpf_funcionario
-            LEFT JOIN departamentos d ON f.id_departamento = d.id
+            LEFT JOIN funcionarios_hospital f ON m.cpf_medico = f.cpf
+            LEFT JOIN departamentos d ON f.id_departamento = d.id_departamento
+            ORDER BY f.nome
         ''')
-        resultados = cursor.fetchall()
         
-        medicos_completos = []
+        resultados = cursor.fetchall()
+        medicos = []
         for row in resultados:
-            medico = {
+            medicos.append({
                 'cpf_medico': row[0],
                 'numero_registro': row[1],
                 'ano_registro': row[2],
                 'telefone': row[3],
                 'nome': row[4],
                 'cargo': row[5],
-                'id_departamento': row[6],
-                'nome_departamento': row[7]
-            }
-            medicos_completos.append(medico)
-        
-        return medicos_completos
+                'nome_departamento': row[6]
+            })
+        return medicos
     except sqlite3.Error as e:
-        print(f"Erro ao consultar médicos com departamento: {e}")
+        print(f"Erro ao consultar médicos com departamentos: {e}")
+        return []
+    finally:
+        conexao.close()
+
+def consultar_medicos_com_departamento_e_obitos():
+    """Consulta médicos com departamento e contagem de óbitos"""
+    conexao = conectaBD()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute('''
+            SELECT 
+                m.cpf_medico,
+                m.numero_registro,
+                m.ano_registro,
+                m.telefone,
+                f.nome,
+                f.cargo,
+                d.nome as nome_departamento,
+                COALESCE((
+                    SELECT COUNT(*) 
+                    FROM obitos o 
+                    WHERE o.id_medico = m.cpf_medico
+                ), 0) as total_obitos
+            FROM medicos m
+            LEFT JOIN funcionarios_hospital f ON m.cpf_medico = f.cpf
+            LEFT JOIN departamentos d ON f.id_departamento = d.id_departamento
+            ORDER BY f.nome
+        ''')
+        
+        resultados = cursor.fetchall()
+        medicos = []
+        for row in resultados:
+            medicos.append({
+                'cpf_medico': row[0],
+                'numero_registro': row[1],
+                'ano_registro': row[2],
+                'telefone': row[3],
+                'nome': row[4],
+                'cargo': row[5],
+                'nome_departamento': row[6],
+                'total_obitos': row[7]
+            })
+        return medicos
+    except sqlite3.Error as e:
+        print(f"Erro ao consultar médicos com departamentos e óbitos: {e}")
         return []
     finally:
         conexao.close()

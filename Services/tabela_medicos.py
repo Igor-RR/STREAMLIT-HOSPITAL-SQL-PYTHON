@@ -1,4 +1,3 @@
-# Services/tabela_medicos.py
 import sqlite3
 
 def criar_tabela():
@@ -13,7 +12,7 @@ def criar_tabela():
                 numero_registro TEXT NOT NULL UNIQUE,
                 ano_registro TEXT NOT NULL,
                 telefone TEXT,
-                FOREIGN KEY (cpf_medico) REFERENCES funcionario_hospital(cpf_funcionario)
+                FOREIGN KEY (cpf_medico) REFERENCES funcionarios_hospital(cpf)
             )
         ''')
         

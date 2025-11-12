@@ -1,4 +1,3 @@
-# Controllers/ObitosController.py
 import sqlite3
 import sys
 import os
@@ -19,6 +18,9 @@ def incluir_obito(obito):
         if not obito.id_paciente:
             raise ValueError("ID do paciente é obrigatório")
         
+        if not obito.id_medico:
+            raise ValueError("ID do médico é obrigatório")
+        
         if not obito.data_obito or not obito.data_obito.strip():
             raise ValueError("Data do óbito é obrigatória")
         
@@ -26,10 +28,11 @@ def incluir_obito(obito):
             raise ValueError("Causa do óbito é obrigatória")
         
         cursor.execute('''
-            INSERT INTO obitos (id_paciente, data_obito, causa_obito, observacoes)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO obitos (id_paciente, id_medico, data_obito, causa_obito, observacoes)
+            VALUES (?, ?, ?, ?, ?)
         ''', (
             obito.id_paciente,
+            obito.id_medico,
             obito.data_obito.strip(),
             obito.causa_obito.strip(),
             obito.observacoes.strip() if obito.observacoes else None
@@ -55,9 +58,10 @@ def consultar_obitos():
         return [Obitos(
             id_obito=row[0],
             id_paciente=row[1],
-            data_obito=row[2],
-            causa_obito=row[3],
-            observacoes=row[4]
+            id_medico=row[2],
+            data_obito=row[3],
+            causa_obito=row[4],
+            observacoes=row[5]
         ) for row in obitos]
     except sqlite3.Error as e:
         print(f"Erro ao consultar: {e}")
@@ -75,9 +79,10 @@ def consultar_obito_por_id(id_obito):
             return Obitos(
                 id_obito=row[0],
                 id_paciente=row[1],
-                data_obito=row[2],
-                causa_obito=row[3],
-                observacoes=row[4]
+                id_medico=row[2],
+                data_obito=row[3],
+                causa_obito=row[4],
+                observacoes=row[5]
             )
         return None
     except sqlite3.Error as e:
@@ -107,6 +112,9 @@ def alterar_obito(obito):
         if not obito.id_paciente:
             raise ValueError("ID do paciente é obrigatório")
         
+        if not obito.id_medico:
+            raise ValueError("ID do médico é obrigatório")
+        
         if not obito.data_obito or not obito.data_obito.strip():
             raise ValueError("Data do óbito é obrigatória")
         
@@ -115,10 +123,11 @@ def alterar_obito(obito):
         
         cursor.execute('''
             UPDATE obitos 
-            SET id_paciente = ?, data_obito = ?, causa_obito = ?, observacoes = ?
+            SET id_paciente = ?, id_medico = ?, data_obito = ?, causa_obito = ?, observacoes = ?
             WHERE id_obito = ?
         ''', (
             obito.id_paciente,
+            obito.id_medico,
             obito.data_obito.strip(),
             obito.causa_obito.strip(),
             obito.observacoes.strip() if obito.observacoes else None,

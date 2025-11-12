@@ -25,6 +25,8 @@ def show_funcionario_page():
             cargo = st.text_input("Cargo:")
             cpf = st.number_input("CPF:", min_value=0, step=1, format="%d")
             id_departamento = st.number_input("ID do Departamento:", min_value=1, step=1)
+            data_admissao = st.text_input("Data de Admissão (YYYY-MM-DD):", placeholder="2024-01-15")
+            salario = st.number_input("Salário:", min_value=0.0, step=100.0, format="%.2f")
             
             # Seleção do tipo de profissional - APENAS MÉDICO OU ENFERMEIRO
             st.write("### Tipo de Profissional")
@@ -68,6 +70,9 @@ def show_funcionario_page():
                 if not cargo.strip():
                     st.error("❌ Cargo é obrigatório!")
                     return
+                if not data_admissao.strip():
+                    st.error("❌ Data de admissão é obrigatória!")
+                    return
                 
                 # Validações específicas por tipo
                 if tipo_funcionario == "Médico":
@@ -86,12 +91,14 @@ def show_funcionario_page():
                         st.error("❌ Ano de registro do COREN é obrigatório!")
                         return
                 
-                # Criar objeto do funcionário
+                # Criar objeto do funcionário - CORREÇÃO: usando campos atualizados
                 novo_funcionario = Funcionario_hospital(
+                    cpf=cpf,
                     nome=nome.strip(),
                     cargo=cargo.strip(),
-                    cpf_funcionario=cpf,
-                    id_departamento=id_departamento
+                    id_departamento=id_departamento,
+                    data_admissao=data_admissao.strip(),
+                    salario=salario
                 )
                 
                 # Preparar dados específicos conforme o tipo
@@ -141,14 +148,18 @@ def show_funcionario_page():
                             info_especifica = f"CRM: {func['numero_registro']} - {func['ano_registro_medico']}"
                             if func['telefone']:
                                 info_especifica += f" | Tel: {func['telefone']}"
-                        else:  # Enfermeiro
+                        elif tipo == 'Enfermeiro':
                             info_especifica = f"COREN: {func['numero_coren']} - {func['ano_registro_enfermeiro']}"
+                        else:
+                            info_especifica = "Sem registro específico"
                             
                         dados.append({
-                            "CPF": func['cpf_funcionario'],
+                            "CPF": func['cpf'],
                             "Nome": func['nome'],
                             "Cargo": func['cargo'],
                             "ID Departamento": func['id_departamento'],
+                            "Data Admissão": func['data_admissao'],
+                            "Salário": f"R$ {func['salario']:.2f}" if func['salario'] else "Não informado",
                             "Tipo": tipo,
                             "Registro": info_especifica
                         })
@@ -161,10 +172,12 @@ def show_funcionario_page():
                     total_funcionarios = len(df)
                     tipos_funcionarios = df['Tipo'].value_counts()
                     
-                    col1, col2 = st.columns(2)
+                    col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Médicos", tipos_funcionarios.get('Médico', 0))
+                        st.metric("Total", total_funcionarios)
                     with col2:
+                        st.metric("Médicos", tipos_funcionarios.get('Médico', 0))
+                    with col3:
                         st.metric("Enfermeiros", tipos_funcionarios.get('Enfermeiro', 0))
                 else:
                     st.info("Nenhum profissional cadastrado.")
@@ -179,10 +192,12 @@ def show_funcionario_page():
                         dados = []
                         for func in funcionarios:
                             dados.append({
-                                "CPF": func.cpf_funcionario,
+                                "CPF": func.cpf,
                                 "Nome": func.nome,
                                 "Cargo": func.cargo,
-                                "ID Departamento": func.id_departamento
+                                "ID Departamento": func.id_departamento,
+                                "Data Admissão": func.data_admissao,
+                                "Salário": f"R$ {func.salario:.2f}" if func.salario else "Não informado"
                             })
                         st.dataframe(pd.DataFrame(dados), use_container_width=True)
                         st.success(f"✅ Encontrados {len(funcionarios)} profissionais!")
@@ -200,7 +215,7 @@ def show_funcionario_page():
             dados = []
             for func in funcionarios:
                 dados.append({
-                    "CPF": func['cpf_funcionario'],
+                    "CPF": func['cpf'],
                     "Nome": func['nome'],
                     "Cargo": func['cargo'],
                     "ID Departamento": func['id_departamento'],
@@ -211,7 +226,7 @@ def show_funcionario_page():
             st.dataframe(df, use_container_width=True)
             
             # Seleção do profissional para excluir
-            nomes_funcionarios = [f"{func['cpf_funcionario']} - {func['nome']} ({func['tipo_funcionario']})" for func in funcionarios]
+            nomes_funcionarios = [f"{func['cpf']} - {func['nome']} ({func['tipo_funcionario']})" for func in funcionarios]
             
             funcionario_selecionado = st.selectbox(
                 "Selecione o profissional para excluir:",
@@ -223,13 +238,15 @@ def show_funcionario_page():
             cpf_excluir = int(funcionario_selecionado.split(" - ")[0])
             
             # Mostrar informações do profissional selecionado
-            func_info = next((func for func in funcionarios if func['cpf_funcionario'] == cpf_excluir), None)
+            func_info = next((func for func in funcionarios if func['cpf'] == cpf_excluir), None)
             if func_info:
                 st.warning(f"⚠️ **Profissional selecionado para exclusão:**")
-                st.write(f"**CPF:** {func_info['cpf_funcionario']}")
+                st.write(f"**CPF:** {func_info['cpf']}")
                 st.write(f"**Nome:** {func_info['nome']}")
                 st.write(f"**Cargo:** {func_info['cargo']}")
                 st.write(f"**ID Departamento:** {func_info['id_departamento']}")
+                st.write(f"**Data Admissão:** {func_info['data_admissao']}")
+                st.write(f"**Salário:** R$ {func_info['salario']:.2f}" if func_info['salario'] else "**Salário:** Não informado")
                 st.write(f"**Tipo:** {func_info['tipo_funcionario']}")
                 
                 # Mostrar informações específicas
@@ -237,7 +254,7 @@ def show_funcionario_page():
                     st.write(f"**CRM:** {func_info['numero_registro']} - {func_info['ano_registro_medico']}")
                     if func_info['telefone']:
                         st.write(f"**Telefone:** {func_info['telefone']}")
-                else:  # Enfermeiro
+                elif func_info['tipo_funcionario'] == 'Enfermeiro':
                     st.write(f"**COREN:** {func_info['numero_coren']} - {func_info['ano_registro_enfermeiro']}")
             
             if st.button("Excluir Profissional", type="primary"):
@@ -258,7 +275,7 @@ def show_funcionario_page():
             dados = []
             for func in funcionarios:
                 dados.append({
-                    "CPF": func['cpf_funcionario'],
+                    "CPF": func['cpf'],
                     "Nome": func['nome'],
                     "Cargo": func['cargo'],
                     "ID Departamento": func['id_departamento'],
@@ -269,7 +286,7 @@ def show_funcionario_page():
             st.dataframe(df, use_container_width=True)
             
             # Seleção do profissional para alterar
-            nomes_funcionarios = [f"{func['cpf_funcionario']} - {func['nome']} ({func['tipo_funcionario']})" for func in funcionarios]
+            nomes_funcionarios = [f"{func['cpf']} - {func['nome']} ({func['tipo_funcionario']})" for func in funcionarios]
             
             funcionario_selecionado = st.selectbox(
                 "Selecione o profissional para alterar:",
@@ -295,14 +312,27 @@ def show_funcionario_page():
                         step=1,
                         value=func_original.id_departamento
                     )
+                    data_admissao = st.text_input(
+                        "Data de Admissão:", 
+                        value=func_original.data_admissao
+                    )
+                    salario = st.number_input(
+                        "Salário:", 
+                        min_value=0.0, 
+                        step=100.0, 
+                        format="%.2f",
+                        value=float(func_original.salario) if func_original.salario else 0.0
+                    )
                     
                     if st.form_submit_button("Confirmar Alterações"):
-                        if nome.strip() and cargo.strip():
+                        if nome.strip() and cargo.strip() and data_admissao.strip():
                             funcionario_atualizado = Funcionario_hospital(
+                                cpf=func_original.cpf,
                                 nome=nome.strip(),
                                 cargo=cargo.strip(),
-                                cpf_funcionario=func_original.cpf_funcionario,
-                                id_departamento=id_departamento
+                                id_departamento=id_departamento,
+                                data_admissao=data_admissao.strip(),
+                                salario=salario
                             )
                             
                             if FuncionarioController.alterar_funcionario(funcionario_atualizado):
@@ -311,7 +341,7 @@ def show_funcionario_page():
                             else:
                                 st.error("❌ Erro ao alterar dados!")
                         else:
-                            st.warning("⚠️ Por favor, informe nome e cargo!")
+                            st.warning("⚠️ Por favor, informe nome, cargo e data de admissão!")
         else:
             st.info("Nenhum profissional cadastrado.")
 

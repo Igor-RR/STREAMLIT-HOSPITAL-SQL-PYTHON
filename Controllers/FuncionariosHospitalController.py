@@ -1,4 +1,3 @@
-# Controllers/FuncionarioHospitalController.py
 import sqlite3
 import sys
 import os
@@ -23,18 +22,20 @@ def incluir_funcionario(funcionario):
         if not funcionario.cargo or not funcionario.cargo.strip():
             raise ValueError("Cargo do funcionário é obrigatório")
         
-        if not funcionario.cpf_funcionario:
+        if not funcionario.cpf:
             raise ValueError("CPF do funcionário é obrigatório")
         
-        # Inserir no banco
+        # Inserir no banco - CORREÇÃO: usando nome correto da tabela e colunas
         cursor.execute('''
-            INSERT INTO funcionario_hospital (nome, cargo, cpf_funcionario, id_departamento)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO funcionarios_hospital (cpf, nome, cargo, id_departamento, data_admissao, salario)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
+            funcionario.cpf,
             funcionario.nome.strip(), 
             funcionario.cargo.strip(),
-            funcionario.cpf_funcionario,
-            funcionario.id_departamento
+            funcionario.id_departamento,
+            funcionario.data_admissao,
+            funcionario.salario
         ))
         
         conexao.commit()
@@ -60,18 +61,20 @@ def incluir_funcionario_com_tipo(funcionario, tipo_funcionario, dados_especifico
         if not funcionario.cargo or not funcionario.cargo.strip():
             raise ValueError("Cargo do funcionário é obrigatório")
         
-        if not funcionario.cpf_funcionario:
+        if not funcionario.cpf:
             raise ValueError("CPF do funcionário é obrigatório")
         
-        # Inserir funcionário base
+        # Inserir funcionário base - CORREÇÃO: usando nome correto da tabela
         cursor.execute('''
-            INSERT INTO funcionario_hospital (nome, cargo, cpf_funcionario, id_departamento)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO funcionarios_hospital (cpf, nome, cargo, id_departamento, data_admissao, salario)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
+            funcionario.cpf,
             funcionario.nome.strip(), 
             funcionario.cargo.strip(),
-            funcionario.cpf_funcionario,
-            funcionario.id_departamento
+            funcionario.id_departamento,
+            funcionario.data_admissao,
+            funcionario.salario
         ))
         
         # Inserir na tabela específica conforme o tipo
@@ -85,7 +88,7 @@ def incluir_funcionario_com_tipo(funcionario, tipo_funcionario, dados_especifico
                 INSERT INTO medicos (cpf_medico, numero_registro, ano_registro, telefone)
                 VALUES (?, ?, ?, ?)
             ''', (
-                funcionario.cpf_funcionario,
+                funcionario.cpf,
                 dados_especificos['numero_registro'].strip(),
                 dados_especificos['ano_registro'].strip(),
                 dados_especificos.get('telefone', '').strip()
@@ -101,7 +104,7 @@ def incluir_funcionario_com_tipo(funcionario, tipo_funcionario, dados_especifico
                 INSERT INTO enfermeiros (cpf_enfermeiro, numero_coren, ano_registro)
                 VALUES (?, ?, ?)
             ''', (
-                funcionario.cpf_funcionario,
+                funcionario.cpf,
                 dados_especificos['numero_coren'].strip(),
                 dados_especificos['ano_registro'].strip()
             ))
@@ -124,13 +127,15 @@ def consultar_funcionarios():
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        cursor.execute("SELECT * FROM funcionario_hospital")
+        cursor.execute("SELECT * FROM funcionarios_hospital")
         funcionarios = cursor.fetchall()
         return [Funcionario_hospital(
-            nome=row[0], 
-            cargo=row[1], 
-            cpf_funcionario=row[2], 
-            id_departamento=row[3]
+            cpf=row[0],
+            nome=row[1], 
+            cargo=row[2], 
+            id_departamento=row[3],
+            data_admissao=row[4],
+            salario=row[5]
         ) for row in funcionarios]
     except sqlite3.Error as e:
         print(f"❌ Erro ao consultar: {e}")
@@ -143,14 +148,16 @@ def consultar_funcionario_por_cpf(cpf):
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        cursor.execute("SELECT * FROM funcionario_hospital WHERE cpf_funcionario = ?", (cpf,))
+        cursor.execute("SELECT * FROM funcionarios_hospital WHERE cpf = ?", (cpf,))
         row = cursor.fetchone()
         if row:
             return Funcionario_hospital(
-                nome=row[0], 
-                cargo=row[1], 
-                cpf_funcionario=row[2], 
-                id_departamento=row[3]
+                cpf=row[0],
+                nome=row[1], 
+                cargo=row[2], 
+                id_departamento=row[3],
+                data_admissao=row[4],
+                salario=row[5]
             )
         return None
     except sqlite3.Error as e:
@@ -160,11 +167,11 @@ def consultar_funcionario_por_cpf(cpf):
         conexao.close()
 
 def excluir_funcionario(cpf):
-    """Exclui um funcionário (apenas da tabela base) - Use excluir_funcionario_completo para exclusão completa"""
+    """Exclui um funcionário (apenas da tabela base)"""
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        cursor.execute("DELETE FROM funcionario_hospital WHERE cpf_funcionario = ?", (cpf,))
+        cursor.execute("DELETE FROM funcionarios_hospital WHERE cpf = ?", (cpf,))
         conexao.commit()
         return cursor.rowcount > 0
     except sqlite3.Error as e:
@@ -188,7 +195,7 @@ def excluir_funcionario_completo(cpf):
             cursor.execute("DELETE FROM enfermeiros WHERE cpf_enfermeiro = ?", (cpf,))
         
         # Excluir do funcionário base
-        cursor.execute("DELETE FROM funcionario_hospital WHERE cpf_funcionario = ?", (cpf,))
+        cursor.execute("DELETE FROM funcionarios_hospital WHERE cpf = ?", (cpf,))
         
         conexao.commit()
         return True
@@ -212,14 +219,16 @@ def alterar_funcionario(funcionario):
             raise ValueError("Cargo do funcionário é obrigatório")
         
         cursor.execute('''
-            UPDATE funcionario_hospital 
-            SET nome = ?, cargo = ?, id_departamento = ?
-            WHERE cpf_funcionario = ?
+            UPDATE funcionarios_hospital 
+            SET nome = ?, cargo = ?, id_departamento = ?, data_admissao = ?, salario = ?
+            WHERE cpf = ?
         ''', (
             funcionario.nome.strip(), 
             funcionario.cargo.strip(),
             funcionario.id_departamento,
-            funcionario.cpf_funcionario
+            funcionario.data_admissao,
+            funcionario.salario,
+            funcionario.cpf
         ))
         
         conexao.commit()
@@ -238,13 +247,15 @@ def buscar_funcionarios_por_nome(nome):
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        cursor.execute("SELECT * FROM funcionario_hospital WHERE nome LIKE ?", (f'%{nome}%',))
+        cursor.execute("SELECT * FROM funcionarios_hospital WHERE nome LIKE ?", (f'%{nome}%',))
         funcionarios = cursor.fetchall()
         return [Funcionario_hospital(
-            nome=row[0], 
-            cargo=row[1], 
-            cpf_funcionario=row[2], 
-            id_departamento=row[3]
+            cpf=row[0],
+            nome=row[1], 
+            cargo=row[2], 
+            id_departamento=row[3],
+            data_admissao=row[4],
+            salario=row[5]
         ) for row in funcionarios]
     except sqlite3.Error as e:
         print(f"❌ Erro ao buscar: {e}")
@@ -257,13 +268,15 @@ def buscar_funcionarios_por_departamento(id_departamento):
     conexao = conectaBD()
     cursor = conexao.cursor()
     try:
-        cursor.execute("SELECT * FROM funcionario_hospital WHERE id_departamento = ?", (id_departamento,))
+        cursor.execute("SELECT * FROM funcionarios_hospital WHERE id_departamento = ?", (id_departamento,))
         funcionarios = cursor.fetchall()
         return [Funcionario_hospital(
-            nome=row[0], 
-            cargo=row[1], 
-            cpf_funcionario=row[2], 
-            id_departamento=row[3]
+            cpf=row[0],
+            nome=row[1], 
+            cargo=row[2], 
+            id_departamento=row[3],
+            data_admissao=row[4],
+            salario=row[5]
         ) for row in funcionarios]
     except sqlite3.Error as e:
         print(f"❌ Erro ao buscar: {e}")
@@ -278,7 +291,7 @@ def consultar_funcionarios_com_tipo():
     try:
         cursor.execute('''
             SELECT 
-                f.cpf_funcionario, f.nome, f.cargo, f.id_departamento,
+                f.cpf, f.nome, f.cargo, f.id_departamento, f.data_admissao, f.salario,
                 CASE 
                     WHEN m.cpf_medico IS NOT NULL THEN 'Médico'
                     WHEN e.cpf_enfermeiro IS NOT NULL THEN 'Enfermeiro'
@@ -286,9 +299,9 @@ def consultar_funcionarios_com_tipo():
                 END as tipo_funcionario,
                 m.numero_registro, m.ano_registro as ano_registro_medico, m.telefone,
                 e.numero_coren, e.ano_registro as ano_registro_enfermeiro
-            FROM funcionario_hospital f
-            LEFT JOIN medicos m ON f.cpf_funcionario = m.cpf_medico
-            LEFT JOIN enfermeiros e ON f.cpf_funcionario = e.cpf_enfermeiro
+            FROM funcionarios_hospital f
+            LEFT JOIN medicos m ON f.cpf = m.cpf_medico
+            LEFT JOIN enfermeiros e ON f.cpf = e.cpf_enfermeiro
         ''')
         
         resultados = cursor.fetchall()
@@ -296,16 +309,18 @@ def consultar_funcionarios_com_tipo():
         
         for row in resultados:
             funcionario = {
-                'cpf_funcionario': row[0],
+                'cpf': row[0],
                 'nome': row[1],
                 'cargo': row[2],
                 'id_departamento': row[3],
-                'tipo_funcionario': row[4],
-                'numero_registro': row[5],
-                'ano_registro_medico': row[6],
-                'telefone': row[7],
-                'numero_coren': row[8],
-                'ano_registro_enfermeiro': row[9]
+                'data_admissao': row[4],
+                'salario': row[5],
+                'tipo_funcionario': row[6],
+                'numero_registro': row[7],
+                'ano_registro_medico': row[8],
+                'telefone': row[9],
+                'numero_coren': row[10],
+                'ano_registro_enfermeiro': row[11]
             }
             funcionarios_com_tipo.append(funcionario)
         
