@@ -73,6 +73,14 @@ def inicializar_sistema():
         )
         from Views.PageMedico import show_medico_page
 
+        # Verificar Pacientes
+        from Models.Paciente import Paciente
+        from Controllers.PacientesController import (
+            inserir_paciente,
+            consultar_pacientes,
+            excluir_paciente
+        )
+        from Views.PagePaciente import show_paciente_page
         from Models.Obitos import Obitos
         import Controllers.ObitosController as ObitosController
         from Views.PageObitos import show_obitos_page
@@ -125,7 +133,7 @@ def main():
     
     pagina = st.sidebar.radio(
         "Navegação",
-        ["Departamentos", "Funcionários", "Médicos", "Enfermeiros", "Óbitos"]
+        ["Departamentos", "Funcionários", "Médicos", "Enfermeiros", "Óbitos", "Pacientes"]
     )
     
     # Navegação entre páginas
@@ -144,6 +152,9 @@ def main():
     elif pagina == "Óbitos":
         from Views.PageObitos import show_obitos_page
         show_obitos_page()
+    elif pagina == "Pacientes":
+        from Views.PagePaciente import show_paciente_page
+        show_paciente_page()
 
 # ========== EXECUÇÃO ==========
 if __name__ == "__main__":
